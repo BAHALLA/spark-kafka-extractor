@@ -6,6 +6,37 @@ A Spark-based distributed CLI tool for parallelizing Kafka topic searches and ba
 - **Search (Grep):** Apply regex, partition, and time range filters. Stream results to console or JSONL.
 - **Backup:** Extract full topics or time slices to Parquet for cold storage or replays.
 
+## Architecture
+
+```mermaid
+flowchart TD
+    CLI[CLI Arguments<br/>--topic, --regex] --> Driver
+    
+    subgraph Spark Cluster
+        Driver[Spark Driver<br/>Builds SQL Plan]
+        Driver --> Exec0
+        Driver --> Exec1
+        Driver --> ExecN
+        
+        Exec0[Spark Executor<br/>Partition 0]
+        Exec1[Spark Executor<br/>Partition 1]
+        ExecN[Spark Executor<br/>Partition N]
+    end
+
+    Exec0 --> Kafka
+    Exec1 --> Kafka
+    ExecN --> Kafka
+
+    subgraph Data Flow
+        Kafka[(Kafka Brokers)] --> Pure[Filter & Decode<br/>Regex / Time Bounding]
+        Pure --> Sinks{Output Sinks}
+    end
+
+    Sinks --> Console[Console Sink]
+    Sinks --> Parquet[Parquet Sink]
+    Sinks --> Jsonl[JSONL Sink]
+```
+
 ## Quickstart
 
 ```bash
